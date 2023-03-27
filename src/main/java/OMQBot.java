@@ -39,7 +39,7 @@ public class OMQBot extends ListenerAdapter {
 
     @Override
     public void onReady(ReadyEvent e){
-        beatmapManager = new BeatmapManager(getOsuDatabase());
+        beatmapManager = new BeatmapManager();
     }
 
     @Override
@@ -63,7 +63,7 @@ public class OMQBot extends ListenerAdapter {
                         }
 
                         if(!check){
-                            event.getChannel().sendMessage("It seems like no one is playing, shutting down omq session...").queue();
+                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
                             stopPlaying(event.getChannel());
                         }else{
                             stopCountdown(channelID);
@@ -107,9 +107,9 @@ public class OMQBot extends ListenerAdapter {
 
             case "!omqlb", "!omqleaderboard", "!omqrank", "!omqranking", "!omqrankings" -> event.getChannel().sendMessage(beatmapManager.getLeaderboard()).queue();
 
-            case "!mapcount" -> event.getChannel().sendMessage("OMQ library currently has **" + beatmapManager.getBeatmapCount() + "** maps").queue();
+            case "!mapcount" -> event.getChannel().sendMessage("OMQ library currently has **" + beatmapManager.getBeatmapCount(GameType.MUSIC) + "** maps").queue();
 
-            case "!mapcount_pattern" -> event.getChannel().sendMessage("OMQ (Pattern) library currently has **" + beatmapManager.getBeatmapCount_pattern() + "** maps").queue();
+            case "!mapcount_pattern" -> event.getChannel().sendMessage("OMQ (Pattern) library currently has **" + beatmapManager.getBeatmapCount(GameType.PATTERN) + "** maps").queue();
         }
 
         if(Arrays.asList(OWNER_IDS).contains(event.getMessage().getAuthor().getId())){ //admin zone
@@ -270,19 +270,9 @@ public class OMQBot extends ListenerAdapter {
         try {
             if(playingChannel == null) return null;
             beatmap = beatmapManager.getRandomBeatmap(playingChannel.gameType);
-            switch(playingChannel.gameType){
-                case MUSIC, BACKGROUND -> {
-                    if(beatmapManager.getBeatmapCount() == playingChannel.playedBeatmapIDs.size()){
-                        channel.sendMessage("You have played all maps!").queue();
-                        return null;
-                    }
-                }
-                case PATTERN -> {
-                    if(beatmapManager.getBeatmapCount_pattern() == playingChannel.playedBeatmapIDs.size()){
-                        channel.sendMessage("You have played all maps!").queue();
-                        return null;
-                    }
-                }
+            if(beatmapManager.getBeatmapCount(playingChannel.gameType) == playingChannel.playedBeatmapIDs.size()){
+                channel.sendMessage("You have played all maps!").queue();
+                return null;
             }
 
             for(int s : playingChannel.playedBeatmapIDs){
@@ -404,22 +394,5 @@ public class OMQBot extends ListenerAdapter {
             }
         }
         playingCountdown.removeIf(c -> c.getTextChannel().getId().equals(channelID));
-    }
-    private JSONArray[] getOsuDatabase(){
-        JSONParser parser = new JSONParser();
-        JSONArray[] arr = new JSONArray[2];
-
-        try {
-            FileReader reader = new FileReader("./osu.json");
-            arr[0] = (JSONArray)parser.parse(reader);
-            reader = new FileReader("./osupattern.json");
-            arr[1] = (JSONArray)parser.parse(reader);
-
-            reader.close();
-
-        } catch (IOException | ParseException e) {
-            e.printStackTrace();
-        }
-        return arr;
     }
 }

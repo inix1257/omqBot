@@ -14,9 +14,6 @@ import java.net.URL;
 import java.sql.*;
 
 public class BeatmapManager {
-    private JSONArray beatmapArray;
-    private JSONArray beatmapArray_pattern;
-
     private static final String SQLITE_JDBC_DRIVER = "org.sqlite.JDBC";
     private static final String SQLITE_FILE_DB_URL = "jdbc:sqlite:beatmap.db";
     private static final String SQLITE_MEMORY_DB_URL = "jdbc:sqlite::memory";
@@ -31,12 +28,10 @@ public class BeatmapManager {
     private String driver = null;
     private String url = null;
 
-    public BeatmapManager(JSONArray[] beatmapArray) {
+    public BeatmapManager() {
         // JDBC Driver 설정
         this.driver = SQLITE_JDBC_DRIVER;
         this.url = SQLITE_FILE_DB_URL;
-        this.beatmapArray = beatmapArray[0];
-        this.beatmapArray_pattern = beatmapArray[1];
         createConnection();
     }
 
@@ -373,50 +368,14 @@ public class BeatmapManager {
 
     public void removeBeatmap(String ID, MessageChannel messageChannel, int manageType){
 
-        if(manageType == 0 ){
-            beatmapArray.removeIf(id -> ((JSONObject)id).get("beatmapset_id").equals(ID));
-            messageChannel.sendMessage("Successfully removed **[" + ID +"]** ").queue();
-            saveToFile(messageChannel);
-        }else if(manageType == 1){
-            beatmapArray_pattern.removeIf(id -> ((JSONObject)id).get("beatmap_id").equals(ID));
-            messageChannel.sendMessage("Successfully removed **[" + ID +"]** (PATTERN)").queue();
-
-            try {
-                FileWriter file = new FileWriter(Config.get("PATTERNJSON_LOCATION"));
-                file.write(beatmapArray_pattern.toJSONString());
-                file.flush();
-                file.close();
-                messageChannel.sendMessage("Successfully saved to file").queue();
-            } catch (IOException e) {
-                messageChannel.sendMessage("Error : " + e.toString()).queue();
-            }
-        }
-
     }
 
-    void saveToFile(MessageChannel messageChannel){
-        JSONArray toAddArr = new JSONArray();
-        for(Object o : beatmapArray){
-            JSONObject jsonObject = (JSONObject)o;
-            toAddArr.add(jsonObject);
-        }
-        try {
-            FileWriter file = null;
-            file = new FileWriter(Config.get("JSON_LOCATION"));
-            file.write(toAddArr.toJSONString());
-            file.flush();
-            file.close();
-            messageChannel.sendMessage("Successfully saved to file").queue();
-        } catch (IOException e) {
-            messageChannel.sendMessage("Error : " + e.toString()).queue();
-        }
-    }
-
-    public int getBeatmapCount(){
+    public int getBeatmapCount(GameType gameType){
         int count = 0;
         try{
             String str =
                     "SELECT COUNT(*) AS COUNT FROM beatmap";
+            if(gameType == GameType.PATTERN) str = "SELECT COUNT(*) AS COUNT FROM beatmap_pattern";
             PreparedStatement statement = conn.prepareStatement(str);
             ResultSet rs = statement.executeQuery();
 
@@ -426,9 +385,5 @@ public class BeatmapManager {
 
         }
         return count;
-    }
-
-    public int getBeatmapCount_pattern(){
-        return beatmapArray_pattern.size();
     }
 }

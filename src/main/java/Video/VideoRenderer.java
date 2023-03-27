@@ -103,14 +103,7 @@ public class VideoRenderer {
                             g2d.setColor(new Color(80, 80, 80, alpha));
                             g2d.setStroke(sliderStroke);
                             g2d.translate(16, 16);
-                            switch(((Slider)obj.data).sliderType){
-                                case "B", "L" -> {
-                                    g2d.draw(((Koohii.Slider)obj.data).sliderPath);
-                                }
-                                case "P" -> {
-                                    g2d.draw(perfectCurve((((Slider)obj.data))));
-                                }
-                            }
+                            g2d.draw(((Koohii.Slider)obj.data).sliderPath);
                             g2d.translate(-16, -16);
                         }
 
@@ -139,59 +132,6 @@ public class VideoRenderer {
         }
     }
 
-    private Path2D perfectCurve(Slider slider){
-        Path2D path = new Path2D.Double();
 
-        Koohii.Vector2 pos1 = slider.sliderPoints.get(0);
-        Koohii.Vector2 pos2 = slider.sliderPoints.get(1);
-        Koohii.Vector2 pos3 = slider.sliderPoints.get(2);
-
-        double yDelta_a = (pos2.y - pos1.y == 0) ? 0.001 : pos2.y - pos1.y;
-        double xDelta_a = (pos2.x - pos1.x == 0) ? 0.001 : pos2.x - pos1.x;
-        double yDelta_b = (pos3.y - pos2.y == 0) ? 0.001 : pos3.y - pos2.y;
-        double xDelta_b = (pos3.x - pos2.x == 0) ? 0.001 : pos3.x - pos2.x;
-
-        double aSlope = yDelta_a / xDelta_a;
-        double bSlope = yDelta_b / xDelta_b;
-
-        double centerX = (aSlope * bSlope * (pos1.y - pos3.y) + bSlope * (pos1.x + pos2.x)
-                - aSlope * (pos2.x + pos3.x)) / (2 * (bSlope - aSlope));
-        double centerY = -1f * (centerX - (pos1.x + pos2.x) / 2f) / aSlope + (pos1.y + pos2.y) / 2f;
-
-        Vector2 center = new Vector2(centerX, centerY);
-
-        double sliderLength = slider.distance;
-
-        double r = Vector2.getDistance(center, new Vector2(pos1.x, pos1.y)); // radius
-
-        double rad = Math.atan2(pos1.y - centerY, pos1.x - centerX);
-        double startX = centerX + r * Math.cos(rad);
-        double startY = centerY + r * Math.sin(rad);
-
-        path.moveTo(startX, startY);
-
-        double totalLength = 0.0;
-        double rate = 0.1 * getCurveDirection(pos1, pos2, pos3);
-
-        for (double a = rad; true ; a += rate) {
-            double prev_x = centerX + r * Math.cos(a - rate);
-            double prev_y = centerY + r * Math.sin(a - rate);
-            double x = centerX + r * Math.cos(a);
-            double y = centerY + r * Math.sin(a);
-            path.lineTo(x, y);
-            totalLength += Vector2.getDistance(new Vector2(x, y), new Vector2(prev_x, prev_y));
-            if(totalLength > sliderLength) break;
-        }
-
-        return path;
-    }
-
-    public static int getCurveDirection(Koohii.Vector2 p1, Koohii.Vector2 p2, Koohii.Vector2 p3) {
-        double x1 = p1.x, y1 = p1.y;
-        double x2 = p2.x - x1, y2 = p2.y - y1;
-        double x3 = p3.x - x1, y3 = p3.y - y1;
-        double crossProduct = (x2 * y3) - (y2 * x3);
-        return Double.compare(crossProduct, 0.0);
-    }
 
 }
