@@ -9,19 +9,18 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import org.apache.commons.io.FileUtils;
-import org.json.simple.JSONArray;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import util.Beatmap;
 import util.BeatmapManager;
 import util.Config;
 import util.GameType;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -188,7 +187,7 @@ public class OMQBot extends ListenerAdapter {
             }
         }
 
-        if (event.getChannel().getId().equals("1086921568011169842")){
+        if (event.getChannel().getId().equals(Config.get("TESTCHANNEL"))){
             beatmapManager.addBeatmap_pattern(command[0], event.getChannel());
         }
 

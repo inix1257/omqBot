@@ -8,13 +8,12 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import util.Config;
 
 import javax.security.auth.login.LoginException;
-import java.io.IOException;
 import java.util.EnumSet;
 
 
 public class main{
 
-    public static void main(String[] args) throws LoginException, IOException {
+    public static void main(String[] args) throws LoginException {
         EnumSet<GatewayIntent> intents = EnumSet.of(
                 // We need messages in guilds to accept commands from users
                 GatewayIntent.GUILD_MESSAGES,
