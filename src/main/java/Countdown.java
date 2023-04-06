@@ -36,9 +36,9 @@ public class Countdown extends TimerTask {
         this.beatmap = beatmap;
         this.gameType = gameType;
         Timer timer = new Timer();
-        timer.schedule(this, 20000);
-        timer.schedule(timer2, 35000);
-        timer.schedule(endTimer, 45000);
+        timer.schedule(this, 100);
+        timer.schedule(timer2, 200);
+        timer.schedule(endTimer, 300);
     }
 
     @Override

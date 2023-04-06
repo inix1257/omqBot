@@ -75,8 +75,10 @@ public class OMQBot extends ListenerAdapter {
                         }
 
                         if(!check){
-                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
-                            stopPlaying(event.getChannel());
+                            stopCountdown(channelID);
+                            setupGame(event);
+//                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
+//                            stopPlaying(event.getChannel());
                         }else{
                             stopCountdown(channelID);
                             setupGame(event);
@@ -320,12 +322,12 @@ public class OMQBot extends ListenerAdapter {
             switch(playingChannel.gameType){
                 case MUSIC -> {
                     url = new URL("https://b.ppy.sh/preview/" + beatmap.beatmapset_id + ".mp3");
-                    file = new File("tmpfiles/" + channel.getId() + ".mp3");
+                    file = new File("tmpfiles/preview/" + channel.getId() + ".mp3");
                     //loadAndPlay((TextChannel) channel, url.toString());
                 }
                 case BACKGROUND -> {
                     url = new URL("https://assets.ppy.sh/beatmaps/" + beatmap.beatmapset_id + "/covers/raw.jpg");
-                    file = new File("tmpfiles/" + channel.getId() + ".jpg");
+                    file = new File("tmpfiles/background/" + channel.getId() + ".jpg");
                 }
                 case PATTERN -> {
                     Thread t = new Thread(()->{
@@ -345,6 +347,7 @@ public class OMQBot extends ListenerAdapter {
 
             System.out.println(beatmap + " / " + beatmap.beatmapset_id);
 
+            channel.sendFile(file).queue();
             channel.sendFile(file).queue();
         } catch (IOException e) {
             e.printStackTrace();
@@ -400,6 +403,16 @@ public class OMQBot extends ListenerAdapter {
         playingChannels.remove(playingChannel);
         stopCountdown(channelID);
         System.out.println("Currently playing in " + playingChannels.size() + " servers");
+
+        try{
+            File mp3file = new File("tmpfiles/preview/" + playingChannel.channelID + ".mp3");
+            mp3file.delete();
+
+            File bgfile = new File("tmpfiles/background/" + playingChannel.channelID + ".jpg");
+            bgfile.delete();
+        }catch(Exception e){
+
+        }
     }
 
     private void stopCountdown(String channelID){

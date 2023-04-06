@@ -24,11 +24,18 @@ import static util.Koohii.*;
 public class VideoRenderer {
     public VideoRenderer(MessageChannelUnion channel, Beatmap beatmap){
         SeekableByteChannel out = null;
-        String dir = "./tmpfiles/" + channel.getId() + ".mp4";
-        String waitmsg = "Rendering video, please wait...";
 
         if(beatmap == null){
             channel.sendMessage("Couldn't find beatmap, please try again").queue();
+            return;
+        }
+
+        String dir = "./tmpfiles/pattern/" + beatmap.beatmap_id + ".mp4";
+        String waitmsg = "Rendering video, please wait...";
+
+        File video = new File(dir);
+        if(video.exists()){ // video already exists
+            //channel.sendFile(new File(dir)).queue();
             return;
         }
 
@@ -123,7 +130,7 @@ public class VideoRenderer {
             encoder.finish();
             channel.sendFile(new File(dir)).queue();
         } catch (Exception e) {
-            channel.sendMessage("An error occurred : " + e).queue();
+            System.out.println("An error occurred : " + e);
             throw new RuntimeException(e);
         } finally {
             NIOUtils.closeQuietly(out);

@@ -163,6 +163,7 @@ public class BeatmapManager {
     }
 
     public void updateBeatmap(int ID, GameType gameType, boolean isAnswer){
+        if(true) return;
         String str = "UPDATE beatmap SET playcount = playcount + 1 WHERE beatmapset_id = ?";
 
         switch(gameType){
