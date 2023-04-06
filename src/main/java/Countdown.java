@@ -1,6 +1,7 @@
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import util.Beatmap;
+import util.GameType;
 import util.Hint;
 
 import java.util.Timer;
@@ -9,6 +10,8 @@ import java.util.TimerTask;
 public class Countdown extends TimerTask {
     private final MessageChannelUnion textChannel;
     private final Beatmap beatmap;
+
+    private final GameType gameType;
 
     private final TimerTask endTimer = new TimerTask() {
         @Override
@@ -20,13 +23,18 @@ public class Countdown extends TimerTask {
     private final TimerTask timer2 = new TimerTask() {
         @Override
         public void run() {
-            textChannel.sendMessage("**Hint** : " + new Hint(beatmap).getArtistHint()).queue();
+            switch(gameType){
+                case PATTERN -> textChannel.sendMessage("**Hint** : " + new Hint(beatmap).getCreatorHint()).queue();
+                default -> textChannel.sendMessage("**Hint** : " + new Hint(beatmap).getArtistHint()).queue();
+            }
+
         }
     };
 
-    public Countdown(MessageChannelUnion textChannel, Beatmap beatmap){
+    public Countdown(MessageChannelUnion textChannel, Beatmap beatmap, GameType gameType){
         this.textChannel = textChannel;
         this.beatmap = beatmap;
+        this.gameType = gameType;
         Timer timer = new Timer();
         timer.schedule(this, 20000);
         timer.schedule(timer2, 35000);

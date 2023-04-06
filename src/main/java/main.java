@@ -25,12 +25,12 @@ public class main{
 
         JDA jda = JDABuilder.createDefault(Config.get("TESTTOKEN"), intents)
                 .setActivity(Activity.playing("!omqhelp"))
-                .disableCache(CacheFlag.MEMBER_OVERRIDES, CacheFlag.VOICE_STATE)
+                .enableCache(CacheFlag.VOICE_STATE)
                 .addEventListeners(new OMQBot())
                 .build();
 
         jda.updateCommands().addCommands(
-                Commands.slash("guessing", "Start playing osu! beatmap guessing game")
+                Commands.slash("guess", "Start playing osu! beatmap guessing game")
                         .addOption(OptionType.STRING, "gametype", "Select type of the game", true, true)
         ).queue();
     }

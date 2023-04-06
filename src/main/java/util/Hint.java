@@ -14,4 +14,8 @@ public class Hint {
     public String getArtistHint(){
         return "The artist of this song is **" + beatmap.artist + "**!";
     }
+
+    public String getCreatorHint(){
+        return "The creator(host) of this beatmap is **" + beatmap.creator + "**!";
+    }
 }

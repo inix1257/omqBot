@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="dataSourceStorageLocal" created-in="IU-223.8836.41">
+  <component name="dataSourceStorageLocal" created-in="IU-231.8109.175">
     <data-source name="beatmap.db" uuid="3f322a11-3341-4374-ad6c-ab9accb47051">
       <database-info product="SQLite" version="3.40.1" jdbc-version="4.2" driver-name="SQLite JDBC" driver-version="3.40.1.0" dbms="SQLITE" exact-version="3.40.1" exact-driver-version="3.40">
         <identifier-quote-string>&quot;</identifier-quote-string>
@@ -10,7 +10,10 @@
       <auth-provider>no-auth</auth-provider>
       <schema-mapping>
         <introspection-scope>
-          <node kind="schema" qname="@" />
+          <node kind="schema">
+            <name qname="@" />
+            <name qname="main" />
+          </node>
         </introspection-scope>
       </schema-mapping>
     </data-source>

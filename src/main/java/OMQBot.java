@@ -1,13 +1,22 @@
 import Video.VideoRenderer;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageChannel;
+import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
+import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.channel.unions.ChannelUnion;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
+import net.dv8tion.jda.api.managers.AudioManager;
 import org.apache.commons.io.FileUtils;
 import util.Beatmap;
 import util.BeatmapManager;
@@ -17,10 +26,7 @@ import util.GameType;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,9 +42,16 @@ public class OMQBot extends ListenerAdapter {
     ArrayList<PlayingChannel> playingChannels = new ArrayList<>();
     ArrayList<Countdown> playingCountdown = new ArrayList<>();
 
+    private AudioPlayerManager playerManager;
+    private Map<Long, GuildMusicManager> musicManagers;
     @Override
     public void onReady(ReadyEvent e){
         beatmapManager = new BeatmapManager();
+
+        this.musicManagers = new HashMap<>();
+        this.playerManager = new DefaultAudioPlayerManager();
+        AudioSourceManagers.registerRemoteSources(playerManager);
+        AudioSourceManagers.registerLocalSource(playerManager);
     }
 
     @Override
@@ -66,7 +79,7 @@ public class OMQBot extends ListenerAdapter {
                             stopPlaying(event.getChannel());
                         }else{
                             stopCountdown(channelID);
-                            setupGame(event.getChannel());
+                            setupGame(event);
                         }
                     });
 
@@ -81,7 +94,7 @@ public class OMQBot extends ListenerAdapter {
                 }
                 channel.sendMessage("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
-                setupGame(event.getChannel());
+                setupGame(event);
 
                 System.out.println("Currently playing in " + playingChannels.size() + " servers");
             }
@@ -93,7 +106,7 @@ public class OMQBot extends ListenerAdapter {
                 beatmapManager.updateBeatmap(beatmap.beatmapset_id, playingChannel.gameType, false);
                 event.getChannel().sendMessage("The answer was `" + beatmap.artist + " - " + beatmap.title + "`\nPlaying next song...").queue();
                 stopCountdown(channelID);
-                setupGame(event.getChannel());
+                setupGame(event);
             }
 
             case "!close", "!stop", "!omqclose", "!omqstop" -> {
@@ -182,7 +195,7 @@ public class OMQBot extends ListenerAdapter {
             case "!playingservers" -> event.getChannel().sendMessage("Currently playing in " + playingChannels.size() + " channels").queue();
             case "!render" -> {
                 PlayingChannel pc = getPlayingChannel(event.getChannel().getId());
-                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), beatmapManager.getBeatmap_pattern(Integer.parseInt(command[1]), pc.gameType)));
+                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), beatmapManager.getBeatmap(Integer.parseInt(command[1]), pc.gameType)));
                 t.start();
             }
         }
@@ -206,29 +219,25 @@ public class OMQBot extends ListenerAdapter {
             case "Music" -> {
                 event.reply("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
-                setupGame(event.getChannel());
-
-                System.out.println("Currently playing in " + playingChannels.size() + " servers");
             }
             case "Background" -> {
                 event.reply("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.BACKGROUND));
-                setupGame(event.getChannel());
-
-                System.out.println("Currently playing in " + playingChannels.size() + " servers");
             }
             case "Pattern" -> {
                 event.reply("Guess the name of the beatmap below!\nType **!skip** to skip current beatmap, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.PATTERN));
-                setupGame(event.getChannel());
             }
         }
+
+        setupGame(event.getChannel());
+        System.out.println("Currently playing in " + playingChannels.size() + " servers");
     }
 
     private final String[] gameTypes = new String[]{"Music", "Background", "Pattern"};
     @Override
     public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event){
-        if (event.getName().equals("guessing") && event.getFocusedOption().getName().equals("gametype")) {
+        if (event.getName().equals("guess") && event.getFocusedOption().getName().equals("gametype")) {
             List<Command.Choice> options = Stream.of(gameTypes)
                     .filter(gameType -> gameType.startsWith(event.getFocusedOption().getValue())) // only display words that start with the user's current input
                     .map(gameType -> new Command.Choice(gameType, gameType)) // map the words to choices
@@ -252,7 +261,7 @@ public class OMQBot extends ListenerAdapter {
             pc.leaderboard.putIfAbsent(username, 0); // add new if null
             pc.leaderboard.put(username, pc.leaderboard.get(username) + 1);
             stopCountdown(pc.channelID);
-            setupGame(event.getChannel());
+            setupGame(event);
             return;
         }
 
@@ -261,9 +270,16 @@ public class OMQBot extends ListenerAdapter {
         if(artistpoints >= 0.9) event.getChannel().sendMessage(event.getMessage().getAuthor().getName() + " got the artist name right! (" + pc.beatmap.artist + ")").queue();
     }
 
+    private Beatmap setupGame(MessageReceivedEvent event){
+        return setupGame(event.getChannel());
+    }
 
+    private Beatmap setupGame(SlashCommandInteractionEvent event){
+        // MUSIC GUESSER
 
-    public Beatmap setupGame(MessageChannelUnion channel){
+        return setupGame(event.getChannel());
+    }
+    private Beatmap setupGame(MessageChannelUnion channel){
         Beatmap beatmap = null;
         PlayingChannel playingChannel = getPlayingChannel(channel.getId());
         try {
@@ -298,7 +314,6 @@ public class OMQBot extends ListenerAdapter {
                 case PATTERN -> playingChannel.playedBeatmapIDs.add(beatmap.beatmap_id);
             }
 
-
             URL url = null;
             File file = null;
             Beatmap finalBeatmap = beatmap;
@@ -306,6 +321,7 @@ public class OMQBot extends ListenerAdapter {
                 case MUSIC -> {
                     url = new URL("https://b.ppy.sh/preview/" + beatmap.beatmapset_id + ".mp3");
                     file = new File("tmpfiles/" + channel.getId() + ".mp3");
+                    //loadAndPlay((TextChannel) channel, url.toString());
                 }
                 case BACKGROUND -> {
                     url = new URL("https://assets.ppy.sh/beatmaps/" + beatmap.beatmapset_id + "/covers/raw.jpg");
@@ -315,7 +331,7 @@ public class OMQBot extends ListenerAdapter {
                     Thread t = new Thread(()->{
                         new VideoRenderer(channel, finalBeatmap);
                         if(getPlayingChannel(playingChannel.channelID) != null){
-                            playingCountdown.add(new Countdown(channel, finalBeatmap));
+                            playingCountdown.add(new Countdown(channel, finalBeatmap, playingChannel.gameType));
                         }
 
                     });
@@ -324,7 +340,7 @@ public class OMQBot extends ListenerAdapter {
                 }
             }
 
-            playingCountdown.add(new Countdown(channel, beatmap));
+            playingCountdown.add(new Countdown(channel, beatmap, playingChannel.gameType));
             FileUtils.copyURLToFile(url, file);
 
             System.out.println(beatmap + " / " + beatmap.beatmapset_id);
@@ -393,5 +409,68 @@ public class OMQBot extends ListenerAdapter {
             }
         }
         playingCountdown.removeIf(c -> c.getTextChannel().getId().equals(channelID));
+    }
+
+    private void loadAndPlay(final TextChannel channel, final String trackUrl) {
+        GuildMusicManager musicManager = getGuildAudioPlayer(channel.getGuild());
+
+        playerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
+            @Override
+            public void trackLoaded(AudioTrack track) {
+                channel.sendMessage("Adding to queue " + track.getInfo().title).queue();
+
+                play(channel.getGuild(), musicManager, track);
+            }
+
+            @Override
+            public void playlistLoaded(AudioPlaylist playlist) {
+                AudioTrack firstTrack = playlist.getSelectedTrack();
+
+                if (firstTrack == null) {
+                    firstTrack = playlist.getTracks().get(0);
+                }
+
+                channel.sendMessage("Adding to queue " + firstTrack.getInfo().title + " (first track of playlist " + playlist.getName() + ")").queue();
+
+                play(channel.getGuild(), musicManager, firstTrack);
+            }
+
+            @Override
+            public void noMatches() {
+                channel.sendMessage("Nothing found by " + trackUrl).queue();
+            }
+
+            @Override
+            public void loadFailed(FriendlyException exception) {
+                channel.sendMessage("Could not play: " + exception.getMessage()).queue();
+            }
+        });
+    }
+
+    private void play(Guild guild, GuildMusicManager musicManager, AudioTrack track) {
+        guild.getAudioManager().openAudioConnection(guild.getVoiceChannelById("960903697922146314"));
+
+        musicManager.scheduler.queue(track);
+    }
+
+    private void skipTrack(TextChannel channel) {
+        GuildMusicManager musicManager = getGuildAudioPlayer(channel.getGuild());
+        musicManager.scheduler.nextTrack();
+
+        channel.sendMessage("Skipped to next track.").queue();
+    }
+
+    private synchronized GuildMusicManager getGuildAudioPlayer(Guild guild) {
+        long guildId = Long.parseLong(guild.getId());
+        GuildMusicManager musicManager = musicManagers.get(guildId);
+
+        if (musicManager == null) {
+            musicManager = new GuildMusicManager(playerManager);
+            musicManagers.put(guildId, musicManager);
+        }
+
+        guild.getAudioManager().setSendingHandler(musicManager.getSendHandler());
+
+        return musicManager;
     }
 }

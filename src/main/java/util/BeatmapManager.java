@@ -133,7 +133,8 @@ public class BeatmapManager {
     }
 
     public String getLeaderboard(){
-        String result = "";
+        String result = "**Leaderboard for osu! Music Quiz**\n";
+        int counter = 0;
         try {
             String str =
                     "SELECT * FROM leaderboard ORDER BY point DESC LIMIT 10";
@@ -142,7 +143,17 @@ public class BeatmapManager {
             ResultSet rs = statement.executeQuery();
 
             while(rs.next()){
-                result += rs.getString("username") + " : " + rs.getInt("point") + " points\n";
+                if(counter == 0){
+                    result += ":first_place: ";
+                }else if(counter == 1){
+                    result += ":second_place: ";
+                }else if(counter == 2){
+                    result += ":third_place: ";
+                }else{
+                    result += "**[#" + counter + "]**";
+                }
+                result += " **" + rs.getString("username") + "** : " + rs.getInt("point") + " points\n";
+                counter++;
             }
 
 
@@ -153,10 +164,8 @@ public class BeatmapManager {
 
     public void updateBeatmap(int ID, GameType gameType, boolean isAnswer){
         String str = "UPDATE beatmap SET playcount = playcount + 1 WHERE beatmapset_id = ?";
-        String parameter = "";
 
         switch(gameType){
-            case MUSIC, BACKGROUND -> {}
             case PATTERN -> str = "UPDATE beatmap_pattern SET playcount = playcount + 1 WHERE beatmap_id = ?";
         }
 
@@ -164,7 +173,6 @@ public class BeatmapManager {
 
             PreparedStatement statement = conn.prepareStatement(str);
             statement.setInt(1, ID);
-
 
             statement.executeUpdate();
 
@@ -176,7 +184,6 @@ public class BeatmapManager {
             }
 
             System.out.println("Playcount increased for beatmap " + ID + " / " + isAnswer);
-
 
             conn.commit();
             statement.close();
@@ -234,7 +241,7 @@ public class BeatmapManager {
         return beatmap;
     }
 
-    public Beatmap getBeatmap_pattern(int ID, GameType gameType){
+    public Beatmap getBeatmap(int ID, GameType gameType){
         Beatmap beatmap = null;
         try {
             String str =
