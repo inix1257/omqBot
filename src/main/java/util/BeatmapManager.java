@@ -156,14 +156,15 @@ public class BeatmapManager {
                 counter++;
             }
 
-
         }catch(SQLException e){}
 
         return result;
     }
 
-    public void updateBeatmap(int ID, GameType gameType, boolean isAnswer){
-        if(true) return;
+    public void updateBeatmap(Beatmap beatmap, GameType gameType, boolean isAnswer){
+        int beatmapID = beatmap.beatmap_id;
+        int beatmapsetID = beatmap.beatmapset_id;
+
         String str = "UPDATE beatmap SET playcount = playcount + 1 WHERE beatmapset_id = ?";
 
         switch(gameType){
@@ -171,20 +172,27 @@ public class BeatmapManager {
         }
 
         try {
-
             PreparedStatement statement = conn.prepareStatement(str);
-            statement.setInt(1, ID);
+
+            switch(gameType){
+                case PATTERN -> statement.setInt(1, beatmapID);
+                default -> statement.setInt(1, beatmapsetID);
+            }
+
 
             statement.executeUpdate();
 
             if(isAnswer){
                 str = str.replace("playcount", "playcount_answer");
                 statement = conn.prepareStatement(str);
-                statement.setInt(1, ID);
+
+                switch(gameType){
+                    case PATTERN -> statement.setInt(1, beatmapID);
+                    default -> statement.setInt(1, beatmapsetID);
+
+                }
                 statement.executeUpdate();
             }
-
-            System.out.println("Playcount increased for beatmap " + ID + " / " + isAnswer);
 
             conn.commit();
             statement.close();

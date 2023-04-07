@@ -65,7 +65,7 @@ public class OMQBot extends ListenerAdapter {
         if(Arrays.asList(BOT_IDS).contains(event.getAuthor().getId()) && msg.contains("Time over! The answer was : ")){
 
             PlayingChannel pc = getPlayingChannel(event.getChannel().getId());
-            beatmapManager.updateBeatmap(pc.beatmap.beatmapset_id, pc.gameType, false);
+            beatmapManager.updateBeatmap(pc.beatmap, pc.gameType, false);
 
             event.getChannel().getHistory().retrievePast(6)
                     .queue(message -> { // success callback
@@ -75,10 +75,8 @@ public class OMQBot extends ListenerAdapter {
                         }
 
                         if(!check){
-                            stopCountdown(channelID);
-                            setupGame(event);
-//                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
-//                            stopPlaying(event.getChannel());
+                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
+                            stopPlaying(event.getChannel());
                         }else{
                             stopCountdown(channelID);
                             setupGame(event);
@@ -105,7 +103,7 @@ public class OMQBot extends ListenerAdapter {
                 if(!isPlaying(channelID)) return;
                 PlayingChannel playingChannel = getPlayingChannel(channelID);
                 Beatmap beatmap = playingChannel.beatmap;
-                beatmapManager.updateBeatmap(beatmap.beatmapset_id, playingChannel.gameType, false);
+                beatmapManager.updateBeatmap(beatmap, playingChannel.gameType, false);
                 event.getChannel().sendMessage("The answer was `" + beatmap.artist + " - " + beatmap.title + "`\nPlaying next song...").queue();
                 stopCountdown(channelID);
                 setupGame(event);
@@ -196,8 +194,7 @@ public class OMQBot extends ListenerAdapter {
             }
             case "!playingservers" -> event.getChannel().sendMessage("Currently playing in " + playingChannels.size() + " channels").queue();
             case "!render" -> {
-                PlayingChannel pc = getPlayingChannel(event.getChannel().getId());
-                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), beatmapManager.getBeatmap(Integer.parseInt(command[1]), pc.gameType)));
+                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), beatmapManager.getBeatmap(Integer.parseInt(command[1]), GameType.PATTERN)));
                 t.start();
             }
         }
@@ -259,7 +256,7 @@ public class OMQBot extends ListenerAdapter {
             pc.beatmap.playcount_answer++;
             event.getMessage().reply(username + " got it right! The answer was : `" + pc.beatmap.toString() + "`").queue();
             beatmapManager.updateLeaderboard(userid, username, pc.gameType);
-            beatmapManager.updateBeatmap(pc.beatmap.beatmapset_id, pc.gameType, true);
+            beatmapManager.updateBeatmap(pc.beatmap, pc.gameType, true);
             pc.leaderboard.putIfAbsent(username, 0); // add new if null
             pc.leaderboard.put(username, pc.leaderboard.get(username) + 1);
             stopCountdown(pc.channelID);
@@ -347,7 +344,6 @@ public class OMQBot extends ListenerAdapter {
 
             System.out.println(beatmap + " / " + beatmap.beatmapset_id);
 
-            channel.sendFile(file).queue();
             channel.sendFile(file).queue();
         } catch (IOException e) {
             e.printStackTrace();
