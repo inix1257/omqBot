@@ -33,11 +33,13 @@ public class VideoRenderer {
         String dir = "./tmpfiles/pattern/" + beatmap.beatmap_id + ".mp4";
         String waitmsg = "Rendering video, please wait...";
 
+
         File video = new File(dir);
         if(video.exists()){ // video already exists
-            //channel.sendFile(new File(dir)).queue();
+            channel.sendFile(new File(dir)).queue();
             return;
         }
+
 
         final Message[] msg = new Message[1];
 
@@ -71,8 +73,8 @@ public class VideoRenderer {
             BasicStroke basicStroke = new BasicStroke(2f, CAP_ROUND, JOIN_ROUND);
             BasicStroke sliderStroke = new BasicStroke(circleSize, CAP_ROUND, JOIN_ROUND);
 
-            int startTime = new Random().nextInt(mapstartTime, mapendTime - mapstartTime);
-            startTime = beatmap.previewTime + new Random().nextInt(-5000, 5000);
+            // int startTime = new Random().nextInt(mapstartTime, mapendTime - mapstartTime);
+            int startTime = beatmap.previewTime;
 
             int time;
             int posX, posY;
