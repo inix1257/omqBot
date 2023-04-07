@@ -686,10 +686,10 @@ exception since you can check lastline/lastpos when you catch */
             Koohii.Vector2 pos2 = slider.sliderPoints.get(1);
             Koohii.Vector2 pos3 = slider.sliderPoints.get(2);
 
-            double yDelta_a = (pos2.y - pos1.y == 0) ? 0.001 : pos2.y - pos1.y;
-            double xDelta_a = (pos2.x - pos1.x == 0) ? 0.001 : pos2.x - pos1.x;
-            double yDelta_b = (pos3.y - pos2.y == 0) ? 0.001 : pos3.y - pos2.y;
-            double xDelta_b = (pos3.x - pos2.x == 0) ? 0.001 : pos3.x - pos2.x;
+            double yDelta_a = (pos2.y - pos1.y == 0) ? 0.1 : pos2.y - pos1.y;
+            double xDelta_a = (pos2.x - pos1.x == 0) ? 0.1 : pos2.x - pos1.x;
+            double yDelta_b = (pos3.y - pos2.y == 0) ? 0.1 : pos3.y - pos2.y;
+            double xDelta_b = (pos3.x - pos2.x == 0) ? 0.1 : pos3.x - pos2.x;
 
             double aSlope = yDelta_a / xDelta_a;
             double bSlope = yDelta_b / xDelta_b;
@@ -713,14 +713,13 @@ exception since you can check lastline/lastpos when you catch */
             double totalLength = 0.0;
             double rate = 0.1 * getCurveDirection(pos1, pos2, pos3);
 
-            for (double a = rad; ; a += rate) {
+            for (double a = rad; totalLength < sliderLength; a += rate) {
                 double prev_x = centerX + r * Math.cos(a - rate);
                 double prev_y = centerY + r * Math.sin(a - rate);
                 double x = centerX + r * Math.cos(a);
                 double y = centerY + r * Math.sin(a);
                 path.lineTo(x, y);
                 totalLength += util.Vector2.getDistance(new util.Vector2(x, y), new util.Vector2(prev_x, prev_y));
-                if(totalLength > sliderLength) break;
             }
 
             return path;
