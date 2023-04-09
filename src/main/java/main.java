@@ -23,14 +23,14 @@ public class main{
                 GatewayIntent.MESSAGE_CONTENT
         );
 
-        JDA jda = JDABuilder.createDefault(Config.get("TESTTOKEN"), intents)
+        JDA jda = JDABuilder.createDefault(Config.get("TOKEN"), intents)
                 .setActivity(Activity.playing("!omqhelp"))
                 .enableCache(CacheFlag.VOICE_STATE)
                 .addEventListeners(new OMQBot())
                 .build();
 
         jda.updateCommands().addCommands(
-                Commands.slash("guess", "Start playing osu! beatmap guessing game")
+                Commands.slash("omq", "Start playing osu! Music Quiz")
                         .addOption(OptionType.STRING, "gametype", "Select type of the game", true, true)
         ).queue();
     }

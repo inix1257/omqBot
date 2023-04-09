@@ -22,15 +22,10 @@ import static java.awt.BasicStroke.JOIN_ROUND;
 import static util.Koohii.*;
 
 public class VideoRenderer {
-    public VideoRenderer(MessageChannelUnion channel, Beatmap beatmap){
+    public VideoRenderer(MessageChannelUnion channel, int beatmap_id){
         SeekableByteChannel out = null;
 
-        if(beatmap == null){
-            channel.sendMessage("Couldn't find beatmap, please try again").queue();
-            return;
-        }
-
-        String dir = "./tmpfiles/pattern/" + beatmap.beatmap_id + ".mp4";
+        String dir = "./tmpfiles/pattern/" + beatmap_id + ".mp4";
         String waitmsg = "Rendering video, please wait...";
 
 
@@ -49,7 +44,7 @@ public class VideoRenderer {
             out = NIOUtils.writableFileChannel(dir);
             AWTSequenceEncoder encoder = new AWTSequenceEncoder(out, Rational.R(20, 1));
 
-            URL osuURL = new URL("https://osu.ppy.sh/osu/" + beatmap.beatmap_id);
+            URL osuURL = new URL("https://osu.ppy.sh/osu/" + beatmap_id);
 
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(osuURL.openStream()));
@@ -74,7 +69,7 @@ public class VideoRenderer {
             BasicStroke sliderStroke = new BasicStroke(circleSize, CAP_ROUND, JOIN_ROUND);
 
             // int startTime = new Random().nextInt(mapstartTime, mapendTime - mapstartTime);
-            int startTime = beatmap.previewTime;
+            int startTime = osumap.previewTime;
 
             int time;
             int posX, posY;

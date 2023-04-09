@@ -53,6 +53,7 @@ public class Bezier {
             }
             resultPoint.x += arrPn[k].x * blend;
             resultPoint.y += arrPn[k].y * blend;
+            System.out.println("inner : " + resultPoint.x + ", " + resultPoint.y);
         }
     }
 

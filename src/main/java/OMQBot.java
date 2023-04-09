@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInterac
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.managers.AudioManager;
@@ -70,14 +71,17 @@ public class OMQBot extends ListenerAdapter {
             event.getChannel().getHistory().retrievePast(6)
                     .queue(message -> { // success callback
                         boolean check = false;
+                        boolean checkAnswer = false;
                         for(Message m : message){
                             if (!Arrays.asList(BOT_IDS).contains(m.getAuthor().getId())) check = true;
+                            if (CheckAnswer(event.getMessage().getContentRaw(), pc.beatmap.title) >= 0.8f) checkAnswer = true;
                         }
 
                         if(!check){
                             event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
                             stopPlaying(event.getChannel());
                         }else{
+                            if(checkAnswer) return;
                             stopCountdown(channelID);
                             setupGame(event);
                         }
@@ -138,10 +142,10 @@ public class OMQBot extends ListenerAdapter {
     private void onCommandHelp(MessageReceivedEvent event){
         String txt = """
                 Available commands for OMQ (osu! Music Quiz) bot :
-                **/guess [gametype]** : Starts playing guessing game, supported gamemodes : MUSIC, BACKGROUND, PATTERN
+                **/omq [gametype]** : Starts playing guessing game, supported gamemodes : MUSIC, BACKGROUND, PATTERN
                 **!skip/pass** : Shows the answer of the current song and skips to the next song.
                 **!stop/close** : Manually closes current OMQ session.
-                **!omqlb, !omqleaderboard** : Shows omq leaderboard
+                **!omqlb, !omqleaderboard** : Shows global omq leaderboard
                 """;
         event.getChannel().sendMessage(txt).queue();
     }
@@ -166,7 +170,7 @@ public class OMQBot extends ListenerAdapter {
                     event.getChannel().sendMessage("Please provide valid beatmapset_id").queue();
                     return;
                 }
-                beatmapManager.removeBeatmap(command[1], event.getChannel(), 0);
+                beatmapManager.removeBeatmap(Integer.parseInt(command[1]), event.getChannel(), GameType.MUSIC);
             }
             case "!addmap_pattern" -> {
                 if (command.length == 1) {
@@ -180,7 +184,7 @@ public class OMQBot extends ListenerAdapter {
                     event.getChannel().sendMessage("Please provide valid beatmapset_id").queue();
                     return;
                 }
-                beatmapManager.removeBeatmap(command[1], event.getChannel(), 1);
+                beatmapManager.removeBeatmap(Integer.parseInt(command[1]), event.getChannel(), GameType.PATTERN);
             }
             case "!announce" -> {
                 if (command.length == 1) {
@@ -188,13 +192,17 @@ public class OMQBot extends ListenerAdapter {
                     return;
                 }
                 for (PlayingChannel pc : playingChannels) {
-                    String channelID = pc.channelID;
-                    event.getJDA().getTextChannelById(channelID).sendMessage("**Announcement :**\n" + msg.replace("!announce ", "") + "").queue();
+                    try {
+                        String channelID = pc.channelID;
+                        event.getJDA().getTextChannelById(channelID).sendMessage("**Announcement :**\n" + msg.replace("!announce ", "")).queue();
+                    }catch(Exception e){
+
+                    }
                 }
             }
             case "!playingservers" -> event.getChannel().sendMessage("Currently playing in " + playingChannels.size() + " channels").queue();
             case "!render" -> {
-                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), beatmapManager.getBeatmap(Integer.parseInt(command[1]), GameType.PATTERN)));
+                Thread t = new Thread(()-> new VideoRenderer(event.getChannel(), Integer.parseInt(command[1])));
                 t.start();
             }
         }
@@ -220,7 +228,7 @@ public class OMQBot extends ListenerAdapter {
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
             }
             case "Background" -> {
-                event.reply("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
+                event.reply("Guess the name of the beatmap below!\nType **!skip** to skip current beatmap, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.BACKGROUND));
             }
             case "Pattern" -> {
@@ -236,7 +244,7 @@ public class OMQBot extends ListenerAdapter {
     private final String[] gameTypes = new String[]{"Music", "Background", "Pattern"};
     @Override
     public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event){
-        if (event.getName().equals("guess") && event.getFocusedOption().getName().equals("gametype")) {
+        if (event.getName().equals("omq") && event.getFocusedOption().getName().equals("gametype")) {
             List<Command.Choice> options = Stream.of(gameTypes)
                     .filter(gameType -> gameType.startsWith(event.getFocusedOption().getValue())) // only display words that start with the user's current input
                     .map(gameType -> new Command.Choice(gameType, gameType)) // map the words to choices
@@ -285,7 +293,9 @@ public class OMQBot extends ListenerAdapter {
             if(playingChannel == null) return null;
             beatmap = beatmapManager.getRandomBeatmap(playingChannel.gameType);
             if(beatmapManager.getBeatmapCount(playingChannel.gameType) == playingChannel.playedBeatmapIDs.size()){
-                channel.sendMessage("You have played all maps!").queue();
+                channel.sendMessage("This channel has played all maps!").queue();
+                channel.sendMessage("Closing omq session...").queue();
+                stopPlaying(channel);
                 return null;
             }
 
@@ -303,7 +313,6 @@ public class OMQBot extends ListenerAdapter {
                 }
             }
 
-            System.out.println("setting up game, current map is : " + beatmap.toString());
             beatmap.playcount++;
 
             playingChannel.beatmap = beatmap;
@@ -328,7 +337,7 @@ public class OMQBot extends ListenerAdapter {
                 }
                 case PATTERN -> {
                     Thread t = new Thread(()->{
-                        new VideoRenderer(channel, finalBeatmap);
+                        new VideoRenderer(channel, finalBeatmap.beatmap_id);
                         if(getPlayingChannel(playingChannel.channelID) != null){
                             playingCountdown.add(new Countdown(channel, finalBeatmap, playingChannel.gameType));
                         }
@@ -342,13 +351,13 @@ public class OMQBot extends ListenerAdapter {
             playingCountdown.add(new Countdown(channel, beatmap, playingChannel.gameType));
             FileUtils.copyURLToFile(url, file);
 
-            System.out.println(beatmap + " / " + beatmap.beatmapset_id);
-
             channel.sendFile(file).queue();
         } catch (IOException e) {
             e.printStackTrace();
             channel.sendMessage("An error occurred, trying again...").queue();
             setupGame(channel);
+        } catch (InsufficientPermissionException e){
+
         }
         return beatmap;
     }

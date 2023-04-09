@@ -30,6 +30,7 @@ public class Beatmap {
                 }
             }
 
+            rs.close();
 
         }catch(Exception e){
             System.out.println("Error while setting up beatmap : " + e);

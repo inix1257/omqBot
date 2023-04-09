@@ -569,6 +569,8 @@ exception since you can check lastline/lastpos when you catch */
 
             else if ((obj.type & OBJ_SLIDER) != 0)
             {
+                System.out.println("parsing slider " + obj.time);
+
                 ++beatmap.nsliders;
                 Slider sli = new Slider();
                 sli.pos.x = Double.parseDouble(setlastpos(s[0]));
@@ -595,6 +597,7 @@ exception since you can check lastline/lastpos when you catch */
                         arrPn.add(new PathPoint(sli.sliderPoints.get(0).x, sli.sliderPoints.get(0).y));
 
                         sli.sliderPath.moveTo(sli.pos.x, sli.pos.y);
+
                         for(int i = 1 ; i < sli.sliderPoints.size(); i ++){
                             Vector2 prevPos = sli.sliderPoints.get(i - 1);
                             Vector2 currPos = sli.sliderPoints.get(i);
@@ -626,6 +629,7 @@ exception since you can check lastline/lastpos when you catch */
                                     p.y = startP.y;
 
                                     sli.sliderPath.lineTo(endP.x, endP.y);
+                                    System.out.println(obj.time + " lineto : " + endP.x + ", " + endP.y);
                                     totalLength += Math.sqrt(Math.pow(Math.abs(startP.x - endP.x), 2) + Math.pow(Math.abs(startP.y - endP.y), 2));
                                     if (totalLength >= sli.distance) break;
                                 }
@@ -654,6 +658,8 @@ exception since you can check lastline/lastpos when you catch */
 
                             arrPn.add(p);
                         }
+
+                        System.out.println("out");
                     }
                     case "P" -> {
                         sli.sliderPath = perfectCurve(sli);

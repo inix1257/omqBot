@@ -150,11 +150,13 @@ public class BeatmapManager {
                 }else if(counter == 2){
                     result += ":third_place: ";
                 }else{
-                    result += "**[#" + counter + "]**";
+                    result += "**[#" + (counter+1) + "]**";
                 }
                 result += " **" + rs.getString("username") + "** : " + rs.getInt("point") + " points\n";
                 counter++;
             }
+
+            rs.close();
 
         }catch(SQLException e){}
 
@@ -255,14 +257,17 @@ public class BeatmapManager {
         try {
             String str =
                     "SELECT * FROM beatmap WHERE beatmapset_id = ?";
-            if(gameType == GameType.PATTERN) str = "SELECT * FROM beatmap_pattern WHERE beatmapset_id = ?";
+            if(gameType == GameType.PATTERN) str = "SELECT * FROM beatmap_pattern WHERE beatmap_id = ?";
             PreparedStatement statement = conn.prepareStatement(str);
             statement.setInt(1, ID);
 
             ResultSet rs = statement.executeQuery();
+
             return new Beatmap(rs, gameType);
 
-        }catch(SQLException e){}
+        }catch(SQLException e){
+            System.out.println("This map doesn't exist in database! : " + ID);
+        }
 
         return beatmap;
     }
@@ -270,6 +275,7 @@ public class BeatmapManager {
     public void addBeatmap(String beatmapsetID, MessageChannel messageChannel){
 
         if(beatmapsetID.contains("osu.ppy.sh")) beatmapsetID = beatmapsetID.split("/")[4].split("#")[0];
+
         try {
             String api = Config.get("API");
             URL url = new URL("https://osu.ppy.sh/api/get_beatmaps?k=" + api + "&s=" + beatmapsetID);
@@ -382,8 +388,27 @@ public class BeatmapManager {
         }
     }
 
-    public void removeBeatmap(String ID, MessageChannel messageChannel, int manageType){
+    public void removeBeatmap(int ID, MessageChannel messageChannel, GameType gameType){
+        try {
+            String str =
+                    "DELETE FROM beatmap WHERE beatmapset_id = ?";
+            if(gameType == GameType.PATTERN) str = "DELETE FROM beatmap_pattern WHERE beatmap_id = ?";
+            PreparedStatement statement = conn.prepareStatement(str);
+            statement.setInt(1, ID);
 
+            statement.executeUpdate();
+            conn.commit();
+
+            statement.close();
+
+            switch(gameType){
+                case PATTERN -> messageChannel.sendMessage("Successfully removed beatmapID **" + ID +"**").queue();
+                default -> messageChannel.sendMessage("Successfully removed beatmapsetID **" + ID +"**").queue();
+            }
+
+        }catch(SQLException e){
+            System.out.println("An error occured while deleteing a beatmap : " + ID);
+        }
     }
 
     public int getBeatmapCount(GameType gameType){
@@ -397,6 +422,7 @@ public class BeatmapManager {
 
             count = rs.getInt("COUNT");
             statement.close();
+            rs.close();
         }catch(Exception e){
 
         }
