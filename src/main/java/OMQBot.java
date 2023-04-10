@@ -25,6 +25,7 @@ import util.Config;
 import util.GameType;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -336,14 +337,10 @@ public class OMQBot extends ListenerAdapter {
                     file = new File("tmpfiles/background/" + channel.getId() + ".jpg");
                 }
                 case PATTERN -> {
-                    Thread t = new Thread(()->{
-                        new VideoRenderer(channel, finalBeatmap.beatmap_id);
-                        if(getPlayingChannel(playingChannel.channelID) != null){
-                            playingCountdown.add(new Countdown(channel, finalBeatmap, playingChannel.gameType));
-                        }
-
-                    });
-                    t.start();
+                    String dir = "./tmpfiles/pattern/" + beatmap.beatmap_id + ".mp4";
+                    file = new File(dir);
+                    playingCountdown.add(new Countdown(channel, beatmap, playingChannel.gameType));
+                    channel.sendFile(file).queue();
                     return beatmap;
                 }
             }
