@@ -19,15 +19,12 @@ public class Beatmap {
             creator = rs.getString("creator");
             approved_date = rs.getString("approved_date");
             switch(gameType){
-                case MUSIC, BACKGROUND -> {
-
-                }
-
                 case PATTERN -> {
                     beatmap_id = rs.getInt("beatmap_id");
                     previewTime = rs.getInt("previewTime");
                     version = rs.getString("version");
                 }
+                default -> {}
             }
 
             rs.close();
