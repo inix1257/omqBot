@@ -569,8 +569,6 @@ exception since you can check lastline/lastpos when you catch */
 
             else if ((obj.type & OBJ_SLIDER) != 0)
             {
-                System.out.println("parsing slider " + obj.time);
-
                 ++beatmap.nsliders;
                 Slider sli = new Slider();
                 sli.pos.x = Double.parseDouble(setlastpos(s[0]));
@@ -587,79 +585,12 @@ exception since you can check lastline/lastpos when you catch */
                 }
 
 
-                double totalLength = 0;
+
                 sli.sliderPath = new Path2D.Double();
 
                 switch(sli.sliderType){
                     case "B", "L" -> {
-                        ArrayList<PathPoint> arrPn = new ArrayList<PathPoint>();
-                        Bezier bezier = new Bezier();
-                        arrPn.add(new PathPoint(sli.sliderPoints.get(0).x, sli.sliderPoints.get(0).y));
-
-                        sli.sliderPath.moveTo(sli.pos.x, sli.pos.y);
-
-                        for(int i = 1 ; i < sli.sliderPoints.size(); i ++){
-                            Vector2 prevPos = sli.sliderPoints.get(i - 1);
-                            Vector2 currPos = sli.sliderPoints.get(i);
-                            if(i == sli.sliderPoints.size() - 1 || Vector2.compare(prevPos, currPos)){
-                                if(i == sli.sliderPoints.size() - 1){
-                                    PathPoint p = new PathPoint();
-                                    p.x = sli.sliderPoints.get(i).x;
-                                    p.y = sli.sliderPoints.get(i).y;
-                                    arrPn.add(p);
-                                }
-                                bezier.setBezierN(arrPn);
-                                double muGap = 10 / sli.distance;
-
-                                PathPoint startP = new PathPoint();
-                                PathPoint endP = new PathPoint();
-
-                                for (double mu = 0; mu <= 1; mu += muGap) {
-                                    startP.x = bezier.getResult().x;
-                                    startP.y = bezier.getResult().y;
-                                    bezier.setMu(mu);
-                                    bezier.bezierCalc();
-                                    endP.x = bezier.getResult().x;
-                                    endP.y = bezier.getResult().y;
-
-                                    if (mu == 0) continue;
-
-                                    PathPoint p = new PathPoint();
-                                    p.x = startP.x;
-                                    p.y = startP.y;
-
-                                    sli.sliderPath.lineTo(endP.x, endP.y);
-                                    System.out.println(obj.time + " lineto : " + endP.x + ", " + endP.y);
-                                    totalLength += Math.sqrt(Math.pow(Math.abs(startP.x - endP.x), 2) + Math.pow(Math.abs(startP.y - endP.y), 2));
-                                    if (totalLength >= sli.distance) break;
-                                }
-
-
-
-                                arrPn.clear();
-                                bezier = new Bezier();
-
-                                PathPoint p = new PathPoint();
-                                if (i < sli.sliderPoints.size() - 1) {
-                                    p.x = prevPos.x;
-                                    p.y = prevPos.y;
-                                    arrPn.add(p);
-                                }else if(i == sli.sliderPoints.size() - 1){
-                                    p.x = currPos.x;
-                                    p.y = currPos.y;
-
-                                    arrPn.add(p);
-                                }
-                            }
-
-                            PathPoint p = new PathPoint();
-                            p.x = sli.sliderPoints.get(i).x;
-                            p.y = sli.sliderPoints.get(i).y;
-
-                            arrPn.add(p);
-                        }
-
-                        System.out.println("out");
+                        bezierCurve(sli);
                     }
                     case "P" -> {
                         sli.sliderPath = perfectCurve(sli);
@@ -706,6 +637,8 @@ exception since you can check lastline/lastpos when you catch */
 
             util.Vector2 center = new util.Vector2(centerX, centerY);
 
+            System.out.println(center.toString());
+
             double sliderLength = slider.distance;
 
             double r = util.Vector2.getDistance(center, new util.Vector2(pos1.x, pos1.y)); // radius
@@ -719,16 +652,94 @@ exception since you can check lastline/lastpos when you catch */
             double totalLength = 0.0;
             double rate = 0.1 * getCurveDirection(pos1, pos2, pos3);
 
+            if(rate == 0){
+                return bezierCurve(slider);
+            }
+
             for (double a = rad; totalLength < sliderLength; a += rate) {
+
                 double prev_x = centerX + r * Math.cos(a - rate);
                 double prev_y = centerY + r * Math.sin(a - rate);
                 double x = centerX + r * Math.cos(a);
                 double y = centerY + r * Math.sin(a);
                 path.lineTo(x, y);
+
                 totalLength += util.Vector2.getDistance(new util.Vector2(x, y), new util.Vector2(prev_x, prev_y));
             }
 
             return path;
+        }
+
+        private Path2D bezierCurve(Slider sli){
+            double totalLength = 0;
+            ArrayList<PathPoint> arrPn = new ArrayList<PathPoint>();
+            Bezier bezier = new Bezier();
+            arrPn.add(new PathPoint(sli.sliderPoints.get(0).x, sli.sliderPoints.get(0).y));
+
+            Path2D sliderPath = new Path2D.Double();
+            sliderPath.moveTo(sli.pos.x, sli.pos.y);
+
+            for(int i = 1 ; i < sli.sliderPoints.size(); i ++){
+                Vector2 prevPos = sli.sliderPoints.get(i - 1);
+                Vector2 currPos = sli.sliderPoints.get(i);
+                if(i == sli.sliderPoints.size() - 1 || Vector2.compare(prevPos, currPos)){
+                    if(i == sli.sliderPoints.size() - 1){
+                        PathPoint p = new PathPoint();
+                        p.x = sli.sliderPoints.get(i).x;
+                        p.y = sli.sliderPoints.get(i).y;
+                        arrPn.add(p);
+                    }
+                    bezier.setBezierN(arrPn);
+                    double muGap = 10 / sli.distance;
+
+                    PathPoint startP = new PathPoint();
+                    PathPoint endP = new PathPoint();
+
+                    for (double mu = 0; mu <= 1; mu += muGap) {
+                        startP.x = bezier.getResult().x;
+                        startP.y = bezier.getResult().y;
+                        bezier.setMu(mu);
+                        bezier.bezierCalc();
+                        endP.x = bezier.getResult().x;
+                        endP.y = bezier.getResult().y;
+
+                        if (mu == 0) continue;
+
+                        PathPoint p = new PathPoint();
+                        p.x = startP.x;
+                        p.y = startP.y;
+
+                        sliderPath.lineTo(endP.x, endP.y);
+                        totalLength += Math.sqrt(Math.pow(Math.abs(startP.x - endP.x), 2) + Math.pow(Math.abs(startP.y - endP.y), 2));
+                        if (totalLength >= sli.distance) break;
+                    }
+
+
+
+                    arrPn.clear();
+                    bezier = new Bezier();
+
+                    PathPoint p = new PathPoint();
+                    if (i < sli.sliderPoints.size() - 1) {
+                        p.x = prevPos.x;
+                        p.y = prevPos.y;
+                        arrPn.add(p);
+                    }else if(i == sli.sliderPoints.size() - 1){
+                        p.x = currPos.x;
+                        p.y = currPos.y;
+
+                        arrPn.add(p);
+                    }
+                }
+
+                PathPoint p = new PathPoint();
+                p.x = sli.sliderPoints.get(i).x;
+                p.y = sli.sliderPoints.get(i).y;
+
+                arrPn.add(p);
+            }
+
+            return sliderPath;
         }
 
         public static int getCurveDirection(Koohii.Vector2 p1, Koohii.Vector2 p2, Koohii.Vector2 p3) {
