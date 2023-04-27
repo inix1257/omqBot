@@ -84,7 +84,7 @@ public class OMQBot extends ListenerAdapter {
                         }else{
                             if(checkAnswer) return;
                             stopCountdown(channelID);
-                            setupGame(event);
+                            setupGame(event.getChannel());
                         }
                     });
 
@@ -99,9 +99,7 @@ public class OMQBot extends ListenerAdapter {
                 }
                 channel.sendMessage("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
-                setupGame(event);
-
-                System.out.println("Currently playing in " + playingChannels.size() + " servers");
+                setupGame(event.getChannel());
             }
 
             case "!pass", "!skip", "!omqpass", "!omqskip" -> {
@@ -111,7 +109,7 @@ public class OMQBot extends ListenerAdapter {
                 beatmapManager.updateBeatmap(beatmap, playingChannel.gameType, false);
                 event.getChannel().sendMessage("The answer was `" + beatmap.artist + " - " + beatmap.title + "`\nPlaying next song...").queue();
                 stopCountdown(channelID);
-                setupGame(event);
+                setupGame(event.getChannel());
             }
 
             case "!close", "!stop", "!omqclose", "!omqstop" -> {
@@ -239,7 +237,6 @@ public class OMQBot extends ListenerAdapter {
         }
 
         setupGame(event.getChannel());
-        System.out.println("Currently playing in " + playingChannels.size() + " servers");
     }
 
     private final String[] gameTypes = new String[]{"Music", "Background", "Pattern"};
@@ -263,13 +260,15 @@ public class OMQBot extends ListenerAdapter {
 
         if(points >= 0.8f){
             pc.beatmap.playcount_answer++;
-            event.getMessage().reply(username + " got it right! The answer was : `" + pc.beatmap.toString() + "`").queue();
-            beatmapManager.updateLeaderboard(userid, username, pc.gameType);
+            long initTime = stopCountdown(pc.channelID);
+            double bonusPoints = beatmapManager.updateLeaderboard(userid, username, pc.gameType, pc.beatmap);
             beatmapManager.updateBeatmap(pc.beatmap, pc.gameType, true);
-            pc.leaderboard.putIfAbsent(username, 0); // add new if null
-            pc.leaderboard.put(username, pc.leaderboard.get(username) + 1);
-            stopCountdown(pc.channelID);
-            setupGame(event);
+            pc.leaderboard.putIfAbsent(username, 0d); // add new if null
+            pc.leaderboard.put(username, pc.leaderboard.get(username) + bonusPoints);
+            event.getMessage().reply(username + " got it right! The answer was : `" + pc.beatmap.toString() + "`\n" +
+                    "**+ " + bonusPoints + " points**").queue();
+
+            setupGame(event.getChannel());
             return;
         }
 
@@ -278,15 +277,6 @@ public class OMQBot extends ListenerAdapter {
         if(artistpoints >= 0.9) event.getChannel().sendMessage(event.getMessage().getAuthor().getName() + " got the artist name right! (" + pc.beatmap.artist + ")").queue();
     }
 
-    private Beatmap setupGame(MessageReceivedEvent event){
-        return setupGame(event.getChannel());
-    }
-
-    private Beatmap setupGame(SlashCommandInteractionEvent event){
-        // MUSIC GUESSER
-
-        return setupGame(event.getChannel());
-    }
     private Beatmap setupGame(MessageChannelUnion channel){
         Beatmap beatmap = null;
         PlayingChannel playingChannel = getPlayingChannel(channel.getId());
@@ -379,15 +369,15 @@ public class OMQBot extends ListenerAdapter {
 
         if(playingChannel == null) return;
 
-        List<Map.Entry<String, Integer>> list_entries = new ArrayList<>(playingChannel.leaderboard.entrySet());
+        List<Map.Entry<String, Double>> list_entries = new ArrayList<>(playingChannel.leaderboard.entrySet());
         list_entries.sort((obj1, obj2) -> obj2.getValue().compareTo(obj1.getValue()));
 
         String str = "**Ranking for this OMQ session : **\n";
 
         int counter = 0;
-        for(Map.Entry<String, Integer> entry : list_entries) {
+        for(Map.Entry<String, Double> entry : list_entries) {
             String username = entry.getKey();
-            int point = entry.getValue();
+            double point = entry.getValue();
             if(counter == 0){
                 str += ":first_place: ";
             }else if(counter == 1){
@@ -395,7 +385,7 @@ public class OMQBot extends ListenerAdapter {
             }else if(counter == 2){
                 str += ":third_place: ";
             }
-            str += ("**" + username + "** : " + point + " pt");
+            str += ("**" + username + "** : " + Math.round(point*10)/10d + " pt");
             str += (point == 1) ? "\n" : "s\n";
             counter++;
         }
@@ -404,7 +394,6 @@ public class OMQBot extends ListenerAdapter {
 
         playingChannels.remove(playingChannel);
         stopCountdown(channelID);
-        System.out.println("Currently playing in " + playingChannels.size() + " servers");
 
         try{
             File mp3file = new File("tmpfiles/preview/" + playingChannel.channelID + ".mp3");
@@ -417,13 +406,20 @@ public class OMQBot extends ListenerAdapter {
         }
     }
 
-    private void stopCountdown(String channelID){
+    private double getTimeBonus(long initTime){
+        return System.currentTimeMillis() - initTime;
+    }
+
+    private long stopCountdown(String channelID){
+        long initTime = 0;
         for(Countdown c : playingCountdown){
             if(c.getTextChannel().getId().equals(channelID)){
-                c.stop();
+                initTime = c.stop();
+                break;
             }
         }
         playingCountdown.removeIf(c -> c.getTextChannel().getId().equals(channelID));
+        return initTime;
     }
 
     private void loadAndPlay(final TextChannel channel, final String trackUrl) {
