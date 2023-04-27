@@ -15,6 +15,8 @@ public class CheckAnswer {
         tmpTitle = tmpTitle.replaceAll("\\~.*?\\~","");
 
         tmpTitle = tmpTitle.split("feat.")[0];
+        tmpTitle = tmpTitle.split("ft.")[0];
+        tmpTitle = tmpTitle.split("ft ")[0];
 
         tmpTitle = tmpTitle.trim();
 
