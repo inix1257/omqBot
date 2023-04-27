@@ -5,6 +5,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileWriter;
@@ -28,6 +30,8 @@ public class BeatmapManager {
     private String driver = null;
     private String url = null;
 
+    private final Logger logger = LoggerFactory.getLogger(BeatmapManager.class);
+
     public BeatmapManager() {
         // JDBC Driver 설정
         this.driver = SQLITE_JDBC_DRIVER;
@@ -41,7 +45,8 @@ public class BeatmapManager {
 
             this.conn = DriverManager.getConnection(this.url);
 
-            System.out.println("BEATMAP DB CONNECTED");
+            logger.info("BEATMAP DB CONNECTED");
+
             this.conn.setAutoCommit(OPT_AUTO_COMMIT);
 
 //            int beatmapset_id;
@@ -99,14 +104,15 @@ public class BeatmapManager {
         return this.conn;
     }
 
-    public void updateLeaderboard(String userid, String username, GameType gameType){
-        int bonusPoint = 0;
+    public double updateLeaderboard(String userid, String username, GameType gameType, Beatmap beatmap){
+        int ID;
 
         switch(gameType){
-            case MUSIC -> bonusPoint = 1;
-            case BACKGROUND -> bonusPoint = 1;
-            case PATTERN -> bonusPoint = 1;
+            case PATTERN -> ID = beatmap.beatmap_id;
+            default -> ID = beatmap.beatmapset_id;
         }
+
+        double rate = getAnswerRate(ID, gameType);
 
         try {
             String str =
@@ -116,13 +122,13 @@ public class BeatmapManager {
             statement.setLong(1, Long.parseLong(userid));
             statement.setString(2, username);
 
-            System.out.println("current statement : " + statement);
+            logger.info("add point for : " + username);
 
             statement.executeUpdate();
 
             str = "UPDATE leaderboard SET point = point + ? WHERE userid = ?";
             statement = conn.prepareStatement(str);
-            statement.setInt(1, bonusPoint);
+            statement.setDouble(1, getBonusPoint(rate));
             statement.setLong(2, Long.parseLong(userid));
             statement.executeUpdate();
             conn.commit();
@@ -130,6 +136,12 @@ public class BeatmapManager {
         }catch (SQLException e){
             System.out.println("SQLException error : " + e);
         }
+
+        return getBonusPoint(rate);
+    }
+
+    private double getBonusPoint(double rate){
+        return Math.round((1.5d - rate) * 10)/10d;
     }
 
     public String getLeaderboard(){
@@ -180,7 +192,6 @@ public class BeatmapManager {
                 case PATTERN -> statement.setInt(1, beatmapID);
                 default -> statement.setInt(1, beatmapsetID);
             }
-
 
             statement.executeUpdate();
 
@@ -420,6 +431,7 @@ public class BeatmapManager {
             PreparedStatement statement = conn.prepareStatement(str);
             ResultSet rs = statement.executeQuery();
 
+
             count = rs.getInt("COUNT");
             statement.close();
             rs.close();
@@ -427,5 +439,28 @@ public class BeatmapManager {
 
         }
         return count;
+    }
+
+    public double getAnswerRate(int ID, GameType gameType){
+        double rate = 0;
+
+        try{
+            String str =
+                    "SELECT CAST(playcount_answer as real) / playcount AS rate FROM beatmap WHERE beatmapset_id = ?";
+            if(gameType == GameType.PATTERN){
+                str = "SELECT CAST(playcount_answer as real) / playcount AS rate FROM beatmap_pattern WHERE beatmap_id = ?";
+            }
+            PreparedStatement statement = conn.prepareStatement(str);
+            statement.setInt(1, ID);
+
+            ResultSet rs = statement.executeQuery();
+
+            rate = rs.getDouble("rate");
+            statement.close();
+            rs.close();
+        }catch(Exception e){
+
+        }
+        return rate;
     }
 }
