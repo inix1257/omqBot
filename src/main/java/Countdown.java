@@ -13,6 +13,8 @@ public class Countdown extends TimerTask {
 
     private final GameType gameType;
 
+    private final long initTime;
+
     private final TimerTask endTimer = new TimerTask() {
         @Override
         public void run() {
@@ -39,6 +41,7 @@ public class Countdown extends TimerTask {
         timer.schedule(this, 20000);
         timer.schedule(timer2, 35000);
         timer.schedule(endTimer, 50000);
+        initTime = System.currentTimeMillis();
     }
 
     @Override
@@ -46,13 +49,15 @@ public class Countdown extends TimerTask {
         textChannel.sendMessage("**Hint** : " + new Hint(beatmap).getTitleHint()).queue();
     }
 
+
     public MessageChannel getTextChannel(){
         return textChannel;
     }
 
-    public void stop(){
+    public long stop(){
         this.cancel();
         timer2.cancel();
         endTimer.cancel();
+        return this.initTime;
     }
 }
