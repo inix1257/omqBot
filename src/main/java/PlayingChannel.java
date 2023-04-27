@@ -10,7 +10,7 @@ public class PlayingChannel {
     Beatmap beatmap;
     GameType gameType;
     ArrayList<Integer> playedBeatmapIDs = new ArrayList<>();
-    Map<String, Integer> leaderboard = new HashMap<>(); //userID, point
+    Map<String, Double> leaderboard = new HashMap<>(); //userID, point
 
     public PlayingChannel(String channelID, GameType gameType){
         this.channelID = channelID;
