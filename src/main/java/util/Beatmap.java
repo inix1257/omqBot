@@ -1,5 +1,8 @@
 package util;
 
+import org.jcodec.common.logging.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.ResultSet;
 
 public class Beatmap {
@@ -10,6 +13,8 @@ public class Beatmap {
     public int playcount, playcount_answer;
 
     public int previewTime;
+
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(Beatmap.class);
 
     public Beatmap(ResultSet rs, GameType gameType){
         try {

@@ -60,14 +60,17 @@ public class OMQBot extends ListenerAdapter {
     }
 
     @Override
-    public void onMessageReceived(MessageReceivedEvent event) {
+    public void onMessageReceived(MessageReceivedEvent event) throws NullPointerException{
         String msg = event.getMessage().getContentRaw();
         String[] command = msg.split(" ", 2);
         String channelID = event.getMessage().getChannel().getId();
-        MessageChannelUnion channel = event.getChannel();
 
         if(event.getAuthor().isBot() && !Arrays.asList(BOT_IDS).contains(event.getAuthor().getId())) return;
-        if(Arrays.asList(BOT_IDS).contains(event.getAuthor().getId()) && msg.contains("Time over! The answer was : ")){
+
+
+        if(Arrays.asList(BOT_IDS).contains(event.getAuthor().getId()) && event.getMessage().getEmbeds().size() > 0
+        && event.getMessage().getEmbeds().get(0).getDescription() != null
+        && event.getMessage().getEmbeds().get(0).getDescription().equals("Time over!")){
 
             PlayingChannel pc = getPlayingChannel(event.getChannel().getId());
             beatmapManager.updateBeatmap(pc.beatmap, pc.gameType, false);
@@ -82,7 +85,9 @@ public class OMQBot extends ListenerAdapter {
                         }
 
                         if(!check){
-                            event.getChannel().sendMessage("Seems like no one is playing, shutting down omq session...").queue();
+                            EmbedBuilder eb = new EmbedBuilder();
+                            eb.setTitle("Seems like no one is playing, shutting down omq session...");
+                            event.getChannel().sendMessageEmbeds(eb.build()).queue();
                             stopPlaying(event.getChannel());
                         }else{
                             if(checkAnswer) return;
@@ -100,7 +105,18 @@ public class OMQBot extends ListenerAdapter {
                 PlayingChannel playingChannel = getPlayingChannel(channelID);
                 Beatmap beatmap = playingChannel.beatmap;
                 beatmapManager.updateBeatmap(beatmap, playingChannel.gameType, false);
-                event.getChannel().sendMessage("The answer was `" + beatmap.artist + " - " + beatmap.title + "`\nPlaying next song...").queue();
+
+                double answerRate = 0;
+                switch(playingChannel.gameType){
+                    case PATTERN -> answerRate = beatmapManager.getAnswerRate(beatmap.beatmap_id, playingChannel.gameType);
+                    default -> answerRate = beatmapManager.getAnswerRate(beatmap.beatmapset_id, playingChannel.gameType);
+                }
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setColor(new Color(120, 120, 255));
+                eb.setDescription("Difficulty : **" + Math.round((1 - answerRate) * 100) + "**/100\n");
+                eb.setAuthor("No one got it right...", null, null);
+                eb.setTitle("**" + beatmap.toString() + "**", "http://osu.ppy.sh/beatmapsets/" + beatmap.beatmapset_id);
+                event.getChannel().sendMessageEmbeds(eb.build()).queue();
                 stopCountdown(channelID);
                 setupGame(event.getChannel());
             }
@@ -121,7 +137,7 @@ public class OMQBot extends ListenerAdapter {
                 for(String s : result){
                     str += s;
                 }
-                eb.addField("", str, false);
+                eb.setDescription(str);
                 event.getChannel().sendMessageEmbeds(eb.build()).queue();
             }
 
@@ -142,14 +158,14 @@ public class OMQBot extends ListenerAdapter {
     }
 
     private void onCommandHelp(MessageReceivedEvent event){
-        String txt = """
-                Available commands for OMQ (osu! Music Quiz) bot :
-                **/omq [gametype]** : Starts playing guessing game, supported gamemodes : MUSIC, BACKGROUND, PATTERN
-                **!skip/pass** : Shows the answer of the current song and skips to the next song.
-                **!stop/close** : Manually closes current OMQ session.
-                **!omqlb, !omqleaderboard** : Shows global omq leaderboard
-                """;
-        event.getChannel().sendMessage(txt).queue();
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("**Available commands for OMQ (osu! Music Quiz) bot**", null);
+        eb.setDescription("**/omq [gametype]** : Starts playing guessing game, supported gamemodes : MUSIC, BACKGROUND, PATTERN\n" +
+                "**!skip/pass** : Shows the answer of the current song and skips to the next song.\n" +
+                "**!stop/close** : Manually closes current OMQ session.\n" +
+                "**!omqlb, !omqleaderboard** : Shows global omq leaderboard");
+        eb.setFooter("Contact : Luscent (osu!) / @luscentos (twitter)", "http://a.ppy.sh/2688581");
+        event.getChannel().sendMessageEmbeds(eb.build()).queue();
     }
 
     private void onAdminCommand(MessageReceivedEvent event, String[] command){
@@ -219,25 +235,36 @@ public class OMQBot extends ListenerAdapter {
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event){
         String optionName = event.getOption("gametype").getAsString();
 
+        EmbedBuilder eb = new EmbedBuilder();
+
         if(isPlaying(event.getChannel().getId())){
-            event.reply("This channel is already playing omq!").queue();
+            eb.setTitle("This channel is already playing omq!");
+            eb.setColor(new Color(255, 40, 40));
+            eb.setDescription("Please type !stop first if you want to start a new game");
+            event.getChannel().sendMessageEmbeds(eb.build()).queue();
             return;
         }
 
+        eb.setTitle("**Ranking for this OMQ session**", null);
+        eb.setDescription("Type **!skip** to skip current song, **!stop** to stop playing");
+        eb.setColor(new Color(190, 120, 120));
+
         switch (optionName){
             case "Music" -> {
-                event.reply("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
+                eb.setTitle("**Guess the name of the song below!**", null);
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
             }
             case "Background" -> {
-                event.reply("Guess the name of the beatmap below!\nType **!skip** to skip current beatmap, **!stop** to stop playing").queue();
+                eb.setTitle("**Guess the name of the beatmap below!**", null);
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.BACKGROUND));
             }
             case "Pattern" -> {
-                event.reply("Guess the name of the beatmap below!\nType **!skip** to skip current beatmap, **!stop** to stop playing").queue();
+                eb.setTitle("**Guess the name of the beatmap below!**", null);
                 playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.PATTERN));
             }
         }
+
+        event.replyEmbeds(eb.build()).queue();
 
         setupGame(event.getChannel());
     }
@@ -411,7 +438,7 @@ public class OMQBot extends ListenerAdapter {
         eb.setColor(new Color(190, 120, 120));
         eb.setDescription(str);
         //eb.setAuthor("Thanks for playing! This bot was made by Luscent", "http://osu.ppy.sh/users/2688581", "http://a.ppy.sh/2688581");
-        eb.setFooter("Thanks for playing! This bot was made by Luscent\n http://osu.ppy.sh/users/2688581", "http://a.ppy.sh/2688581");
+        //.setFooter("Thanks for playing! This bot was made by Luscent\n http://osu.ppy.sh/users/2688581", "http://a.ppy.sh/2688581");
         //eb.setAuthor(event.getAuthor().getName() + " got it right!", null, event.getAuthor().getAvatarUrl());
 
         messageChannel.sendMessageEmbeds(eb.build()).queue();
