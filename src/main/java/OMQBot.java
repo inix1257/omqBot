@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.unions.ChannelUnion;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
@@ -24,11 +25,13 @@ import util.BeatmapManager;
 import util.Config;
 import util.GameType;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -92,16 +95,6 @@ public class OMQBot extends ListenerAdapter {
         }
 
         switch(command[0]){
-            case "!omq", "!omqplay" -> {
-                if(isPlaying(channelID)){
-                    event.getChannel().sendMessage("This channel is already playing omq!").queue();
-                    return;
-                }
-                channel.sendMessage("Guess the name of the song below!\nType **!skip** to skip current song, **!stop** to stop playing").queue();
-                playingChannels.add(new PlayingChannel(event.getChannel().getId(), GameType.MUSIC));
-                setupGame(event.getChannel());
-            }
-
             case "!pass", "!skip", "!omqpass", "!omqskip" -> {
                 if(!isPlaying(channelID)) return;
                 PlayingChannel playingChannel = getPlayingChannel(channelID);
@@ -114,13 +107,23 @@ public class OMQBot extends ListenerAdapter {
 
             case "!close", "!stop", "!omqclose", "!omqstop" -> {
                 if(!isPlaying(channelID)) return;
-                event.getChannel().sendMessage("Closing omq session...").queue();
                 stopPlaying(event.getChannel());
             }
 
             case "!omqhelp" -> onCommandHelp(event);
 
-            case "!omqlb", "!omqleaderboard", "!omqrank", "!omqranking", "!omqrankings" -> event.getChannel().sendMessage(beatmapManager.getLeaderboard()).queue();
+            case "!omqlb", "!omqleaderboard", "!omqrank", "!omqranking", "!omqrankings" ->{
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setTitle("**Leaderboard for osu! Music Quiz**", null);
+                eb.setColor(new Color(190, 120, 120));
+                String result[] = beatmapManager.getLeaderboard();
+                String str = "";
+                for(String s : result){
+                    str += s;
+                }
+                eb.addField("", str, false);
+                event.getChannel().sendMessageEmbeds(eb.build()).queue();
+            }
 
             case "!mapcount" -> event.getChannel().sendMessage("OMQ library currently has **" + beatmapManager.getBeatmapCount(GameType.MUSIC) + "** maps").queue();
 
@@ -261,12 +264,25 @@ public class OMQBot extends ListenerAdapter {
         if(points >= 0.8f){
             pc.beatmap.playcount_answer++;
             long initTime = stopCountdown(pc.channelID);
-            double bonusPoints = beatmapManager.updateLeaderboard(userid, username, pc.gameType, pc.beatmap);
+            String timeTaken = String.format("%.1f", (System.currentTimeMillis() - initTime)/1000f) + "s";
+
+            double answerRate = beatmapManager.updateLeaderboard(userid, username, pc.gameType, pc.beatmap);
+            double diffBonus = 1.5d - answerRate;
+            double timeBonus = getTimeBonus(initTime);
+            double totalBonus = Math.round(diffBonus * timeBonus * 10d) / 10d;
+
             beatmapManager.updateBeatmap(pc.beatmap, pc.gameType, true);
             pc.leaderboard.putIfAbsent(username, 0d); // add new if null
-            pc.leaderboard.put(username, pc.leaderboard.get(username) + bonusPoints);
-            event.getMessage().reply(username + " got it right! The answer was : `" + pc.beatmap.toString() + "`\n" +
-                    "**+ " + bonusPoints + " points**").queue();
+            pc.leaderboard.put(username, pc.leaderboard.get(username) + totalBonus);
+
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setTitle("**" + pc.beatmap.toString() + "**", "http://osu.ppy.sh/beatmapsets/" + pc.beatmap.beatmapset_id);
+            eb.setColor(new Color(120, 120, 255));
+            eb.setDescription("Time Taken : " + timeTaken + " / Difficulty : **" + Math.round((1 - answerRate) * 100) + "**/100\n");
+            eb.setFooter("+" + totalBonus + " points", null);
+            eb.setAuthor(event.getAuthor().getName() + " got it right!", null, event.getAuthor().getAvatarUrl());
+
+            event.getChannel().sendMessageEmbeds(eb.build()).queue();
 
             setupGame(event.getChannel());
             return;
@@ -372,7 +388,7 @@ public class OMQBot extends ListenerAdapter {
         List<Map.Entry<String, Double>> list_entries = new ArrayList<>(playingChannel.leaderboard.entrySet());
         list_entries.sort((obj1, obj2) -> obj2.getValue().compareTo(obj1.getValue()));
 
-        String str = "**Ranking for this OMQ session : **\n";
+        String str = "";
 
         int counter = 0;
         for(Map.Entry<String, Double> entry : list_entries) {
@@ -390,7 +406,15 @@ public class OMQBot extends ListenerAdapter {
             counter++;
         }
 
-        messageChannel.sendMessage(str).queue();
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("**Ranking for this OMQ session**", null);
+        eb.setColor(new Color(190, 120, 120));
+        eb.setDescription(str);
+        //eb.setAuthor("Thanks for playing! This bot was made by Luscent", "http://osu.ppy.sh/users/2688581", "http://a.ppy.sh/2688581");
+        eb.setFooter("Thanks for playing! This bot was made by Luscent\n http://osu.ppy.sh/users/2688581", "http://a.ppy.sh/2688581");
+        //eb.setAuthor(event.getAuthor().getName() + " got it right!", null, event.getAuthor().getAvatarUrl());
+
+        messageChannel.sendMessageEmbeds(eb.build()).queue();
 
         playingChannels.remove(playingChannel);
         stopCountdown(channelID);
@@ -407,7 +431,9 @@ public class OMQBot extends ListenerAdapter {
     }
 
     private double getTimeBonus(long initTime){
-        return System.currentTimeMillis() - initTime;
+        double timeTaken = System.currentTimeMillis() - initTime;
+        timeTaken /= 1000d;
+            return -(1-Math.pow((1-0.01*timeTaken), 2)) + 1.3;
     }
 
     private long stopCountdown(String channelID){

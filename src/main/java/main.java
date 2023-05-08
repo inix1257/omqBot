@@ -15,17 +15,14 @@ public class main{
 
     public static void main(String[] args) throws LoginException {
         EnumSet<GatewayIntent> intents = EnumSet.of(
-                // We need messages in guilds to accept commands from users
                 GatewayIntent.GUILD_MESSAGES,
                 // We need voice states to connect to the voice channel
-                GatewayIntent.GUILD_VOICE_STATES,
-                // Enable access to message.getContentRaw()
+                //GatewayIntent.GUILD_VOICE_STATES,
                 GatewayIntent.MESSAGE_CONTENT
         );
 
-        JDA jda = JDABuilder.createDefault(Config.get("TOKEN"), intents)
+        JDA jda = JDABuilder.createLight(Config.get("TOKEN"), intents)
                 .setActivity(Activity.playing("!omqhelp"))
-                .enableCache(CacheFlag.VOICE_STATE)
                 .addEventListeners(new OMQBot())
                 .build();
 

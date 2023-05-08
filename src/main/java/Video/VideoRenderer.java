@@ -131,6 +131,7 @@ public class VideoRenderer {
             throw new RuntimeException(e);
         } finally {
             NIOUtils.closeQuietly(out);
+
         }
     }
 

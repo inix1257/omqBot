@@ -126,26 +126,27 @@ public class BeatmapManager {
 
             statement.executeUpdate();
 
-            str = "UPDATE leaderboard SET point = point + ? WHERE userid = ?";
+            str = "UPDATE leaderboard SET point = point + ?, lastupdated = datetime('now') WHERE userid = ?";
             statement = conn.prepareStatement(str);
             statement.setDouble(1, getBonusPoint(rate));
             statement.setLong(2, Long.parseLong(userid));
             statement.executeUpdate();
+
             conn.commit();
             statement.close();
         }catch (SQLException e){
             System.out.println("SQLException error : " + e);
         }
 
-        return getBonusPoint(rate);
+        return rate;
     }
 
     private double getBonusPoint(double rate){
-        return Math.round((1.5d - rate) * 10)/10d;
+        return 1.5d - rate;
     }
 
-    public String getLeaderboard(){
-        String result = "**Leaderboard for osu! Music Quiz**\n";
+    public String[] getLeaderboard(){
+        String result[] = new String[10];
         int counter = 0;
         try {
             String str =
@@ -156,15 +157,15 @@ public class BeatmapManager {
 
             while(rs.next()){
                 if(counter == 0){
-                    result += ":first_place: ";
+                    result[0] = ":first_place: ";
                 }else if(counter == 1){
-                    result += ":second_place: ";
+                    result[1] = ":second_place: ";
                 }else if(counter == 2){
-                    result += ":third_place: ";
+                    result[2] = ":third_place: ";
                 }else{
-                    result += "**[#" + (counter+1) + "]**";
+                    result[counter] = "**[#" + (counter+1) + "]**";
                 }
-                result += " **" + rs.getString("username") + "** : " + rs.getInt("point") + " points\n";
+                result[counter] += " **" + rs.getString("username") + "** : " + rs.getInt("point") + " points\n";
                 counter++;
             }
 
@@ -250,9 +251,9 @@ public class BeatmapManager {
     public Beatmap getRandomBeatmap(GameType gameType){
         Beatmap beatmap = null;
         try {
-            String str =
-                    "SELECT * FROM beatmap ORDER BY RANDOM() LIMIT 1";
-            if(gameType == GameType.PATTERN) str = "SELECT * FROM beatmap_pattern ORDER BY RANDOM() LIMIT 1";
+            String str = "SELECT * FROM beatmap ORDER BY RANDOM() LIMIT 1";
+            if(gameType == GameType.PATTERN)
+                   str = "SELECT * FROM beatmap_pattern ORDER BY RANDOM() LIMIT 1";
             PreparedStatement statement = conn.prepareStatement(str);
 
             ResultSet rs = statement.executeQuery();
