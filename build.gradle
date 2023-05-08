@@ -22,13 +22,13 @@ repositories {
 dependencies {
     implementation("net.dv8tion:JDA:5.0.0-alpha.17")
     implementation("commons-io:commons-io:2.11.0")
-    implementation("com.zaxxer:HikariCP:5.0.1")
+    //implementation("com.zaxxer:HikariCP:5.0.1")
     implementation("org.xerial:sqlite-jdbc:3.36.0.3")
     implementation("io.github.cdimascio:dotenv-java:2.2.4")
     implementation("com.googlecode.json-simple:json-simple:1.1.1")
 
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-maven-plugin
-    implementation 'org.springframework.boot:spring-boot-maven-plugin:3.0.5'
+    //implementation 'org.springframework.boot:spring-boot-maven-plugin:3.0.5'
 
 
     implementation 'org.jcodec:jcodec:0.2.5'
