@@ -637,8 +637,6 @@ exception since you can check lastline/lastpos when you catch */
 
             util.Vector2 center = new util.Vector2(centerX, centerY);
 
-            System.out.println(center.toString());
-
             double sliderLength = slider.distance;
 
             double r = util.Vector2.getDistance(center, new util.Vector2(pos1.x, pos1.y)); // radius
