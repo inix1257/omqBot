@@ -41,6 +41,8 @@ public class OMQBot extends ListenerAdapter {
     private final String[] BOT_IDS = Config.get("BOT_ID").split(" ");
     private final String[] OWNER_IDS = Config.get("OWNER_ID").split(" ");
 
+    private final String tmpPath = "/tmpfiles";
+
     BeatmapManager beatmapManager;
     public OMQBot() {
     }
@@ -362,15 +364,15 @@ public class OMQBot extends ListenerAdapter {
             switch(playingChannel.gameType){
                 case MUSIC -> {
                     url = new URL("https://b.ppy.sh/preview/" + beatmap.beatmapset_id + ".mp3");
-                    file = new File("tmpfiles/preview/" + channel.getId() + ".mp3");
+                    file = new File(tmpPath + "/preview/" + channel.getId() + ".mp3");
                     //loadAndPlay((TextChannel) channel, url.toString());
                 }
                 case BACKGROUND -> {
                     url = new URL("https://assets.ppy.sh/beatmaps/" + beatmap.beatmapset_id + "/covers/raw.jpg");
-                    file = new File("tmpfiles/background/" + channel.getId() + ".jpg");
+                    file = new File(tmpPath + "/background/" + channel.getId() + ".jpg");
                 }
                 case PATTERN -> {
-                    String dir = "./tmpfiles/pattern/" + beatmap.beatmap_id + ".mp4";
+                    String dir = tmpPath + "/pattern/" + beatmap.beatmap_id + ".mp4";
                     file = new File(dir);
                     playingCountdown.add(new Countdown(channel, beatmap, playingChannel.gameType));
                     channel.sendFile(file).queue();
@@ -447,10 +449,10 @@ public class OMQBot extends ListenerAdapter {
         stopCountdown(channelID);
 
         try{
-            File mp3file = new File("tmpfiles/preview/" + playingChannel.channelID + ".mp3");
+            File mp3file = new File(tmpPath + "/preview/" + playingChannel.channelID + ".mp3");
             mp3file.delete();
 
-            File bgfile = new File("tmpfiles/background/" + playingChannel.channelID + ".jpg");
+            File bgfile = new File(tmpPath + "/background/" + playingChannel.channelID + ".jpg");
             bgfile.delete();
         }catch(Exception e){
 
