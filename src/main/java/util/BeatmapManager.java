@@ -20,12 +20,9 @@ public class BeatmapManager {
     private static final String SQLITE_FILE_DB_URL = "jdbc:sqlite:beatmap.db";
     private static final String SQLITE_MEMORY_DB_URL = "jdbc:sqlite::memory";
 
-    //  - Database 옵션 변수
     private static final boolean OPT_AUTO_COMMIT = false;
     private static final int OPT_VALID_TIMEOUT = 500;
 
-    // 변수 설정
-    //   - Database 접속 정보 변수
     private Connection conn = null;
     private String driver = null;
     private String url = null;
@@ -33,7 +30,6 @@ public class BeatmapManager {
     private final Logger logger = LoggerFactory.getLogger(BeatmapManager.class);
 
     public BeatmapManager() {
-        // JDBC Driver 설정
         this.driver = SQLITE_JDBC_DRIVER;
         this.url = SQLITE_FILE_DB_URL;
         createConnection();
@@ -97,7 +93,6 @@ public class BeatmapManager {
 
 
         } catch (ClassNotFoundException | SQLException e) {
-            System.out.println("DB CONNECTION FAILED : " + e);
             e.printStackTrace();
         }
 
@@ -122,8 +117,6 @@ public class BeatmapManager {
             statement.setLong(1, Long.parseLong(userid));
             statement.setString(2, username);
 
-            logger.info("add point for : " + username);
-
             statement.executeUpdate();
 
             str = "UPDATE leaderboard SET point = point + ?, lastupdated = datetime('now') WHERE userid = ?";
@@ -135,7 +128,7 @@ public class BeatmapManager {
             conn.commit();
             statement.close();
         }catch (SQLException e){
-            System.out.println("SQLException error : " + e);
+
         }
 
         return rate;
@@ -211,7 +204,7 @@ public class BeatmapManager {
             conn.commit();
             statement.close();
         }catch (SQLException e){
-            System.out.println("SQLException error : " + e);
+
         }
     }
 
@@ -224,9 +217,6 @@ public class BeatmapManager {
             e.printStackTrace();
         } finally {
             this.conn = null;
-
-            // 로그 출력
-            System.out.println("CLOSED");
         }
     }
 
@@ -319,18 +309,17 @@ public class BeatmapManager {
             statement.setString(4, creator);
             statement.setString(5, approved_date);
 
-            System.out.println("current statement : " + statement.toString());
-
             statement.executeUpdate();
             conn.commit();
 
             statement.close();
 
             messageChannel.sendMessage("Successfully added beatmapsetid **" + beatmapset_id +"** `" + artist + " - " + title + "`").queue();
-        } catch (ParseException | IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         } catch (SQLException e) {
+            messageChannel.sendMessage("An error has occurred while inserting data to database, please try again.").queue();
+            e.printStackTrace();
+        } catch (Exception e) {
+            messageChannel.sendMessage("An error has occurred while getting beatmap info, please try again.").queue();
             throw new RuntimeException(e);
         }
     }
@@ -384,18 +373,17 @@ public class BeatmapManager {
             statement.setInt(7, previewTime);
             statement.setString(8, approved_date);
 
-            System.out.println("current statement : " + statement.toString());
-
             statement.executeUpdate();
             conn.commit();
 
             statement.close();
 
             messageChannel.sendMessage("Successfully added beatmapID **" + beatmapID +"** `" + obj.get("artist") + " - " + obj.get("title") + "` (PATTERN)").queue();
-        } catch (ParseException | IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         } catch (SQLException e) {
+            messageChannel.sendMessage("An error has occurred while inserting data to database, please try again.").queue();
+            e.printStackTrace();
+        } catch (Exception e) {
+            messageChannel.sendMessage("An error has occurred while getting beatmap info, please try again.").queue();
             throw new RuntimeException(e);
         }
     }
@@ -418,8 +406,8 @@ public class BeatmapManager {
                 default -> messageChannel.sendMessage("Successfully removed beatmapsetID **" + ID +"**").queue();
             }
 
-        }catch(SQLException e){
-            System.out.println("An error occured while deleteing a beatmap : " + ID);
+        }catch(Exception e){
+            messageChannel.sendMessage("An error has occurred while deleting the map, please try again.").queue();
         }
     }
 
