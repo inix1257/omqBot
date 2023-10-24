@@ -3,9 +3,11 @@ plugins {
 }
 
 jar {
-    enabled = false
+    manifest {
+        attributes 'Main-Class': 'OsuMusicQuizBot_Java.main'
+    }
+    //enabled = true
 }
-
 group 'org.example'
 version '1.0-SNAPSHOT'
 
