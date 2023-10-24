@@ -16,7 +16,7 @@ public class main{
     public static void main(String[] args) throws LoginException {
         EnumSet<GatewayIntent> intents = EnumSet.of(
                 GatewayIntent.GUILD_MESSAGES,
-                // We need voice states to connect to the voice channel
+                // disabled voice channel perm for now
                 //GatewayIntent.GUILD_VOICE_STATES,
                 GatewayIntent.MESSAGE_CONTENT
         );
