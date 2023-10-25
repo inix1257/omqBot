@@ -41,7 +41,7 @@ public class OMQBot extends ListenerAdapter {
     private final String[] BOT_IDS = Config.get("BOT_ID").split(" ");
     private final String[] OWNER_IDS = Config.get("OWNER_ID").split(" ");
 
-    private final String tmpPath = "/tmpfiles";
+    private final String tmpPath = "tmpfiles";
 
     BeatmapManager beatmapManager;
     public OMQBot() {
